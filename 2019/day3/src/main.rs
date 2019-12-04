@@ -1,11 +1,12 @@
-use std::cmp;
 use std::io::{self, Read};
+use std::iter::Iterator;
 
 fn main() {
     let mut input = String::new();
     io::stdin().read_to_string(&mut input).unwrap();
 
     part1(&input);
+    part2(&input);
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -69,22 +70,6 @@ fn is_vertical(p1: Pair, p2: Pair) -> bool {
     p1.x - p2.x == 0
 }
 
-fn get_intersection_distance_horizontal(a1: Pair, a2: Pair, b1: Pair, b2: Pair) -> Option<i32> {
-    if a1.y != b1.y && a2.y != b2.y {
-        return None;
-    }
-    let minx = *[a1.x, a2.x, b1.x, b2.x].iter().min().unwrap();
-    let maxx = *[a1.x, a2.x, b1.x, b2.x].iter().max().unwrap();
-    let mut largest = i32::max_value();
-    for iter_x in minx..maxx + 1 {
-        let val = id(Pair { x: iter_x, y: a1.y });
-        if val < largest {
-            largest = val;
-        }
-    }
-    Some(largest)
-}
-
 fn mix_lines_intersect(h1: Pair, h2: Pair, v1: Pair, v2: Pair) -> bool {
     if !((i32::min(h1.x, h2.x) <= v1.x) && (v1.x <= i32::max(h1.x, h2.x))) {
         return false;
@@ -95,51 +80,62 @@ fn mix_lines_intersect(h1: Pair, h2: Pair, v1: Pair, v2: Pair) -> bool {
     true
 }
 
-fn lines_intersect(a1: Pair, a2: Pair, b1: Pair, b2: Pair) -> bool {
+fn get_intersection(a1: Pair, a2: Pair, b1: Pair, b2: Pair) -> Option<Pair> {
+    let (mut h1, mut h2, mut v1, mut v2) = (b1, b2, a1, a2);
     if is_horizontal(a1, a2) {
-        return mix_lines_intersect(a1, a2, b1, b2);
-    } else {
-        return mix_lines_intersect(b1, b2, a1, a2);
+        h1 = a1;
+        h2 = a2;
+        v1 = b1;
+        v2 = b2;
     }
-}
-
-fn get_intersection_distance_vertical(a1: Pair, a2: Pair, b1: Pair, b2: Pair) -> Option<i32> {
-    if a1.x != b1.x && a2.x != b2.x {
-        return None;
-    }
-    let miny = *[a1.y, a2.y, b1.y, b2.y].iter().min().unwrap();
-    let maxy = *[a1.y, a2.y, b1.y, b2.y].iter().max().unwrap();
-    let mut largest = i32::max_value();
-    for iter_y in miny..maxy + 1 {
-        let val = id(Pair { x: a1.x, y: iter_y });
-        if val < largest {
-            largest = val;
-        }
-    }
-    Some(largest)
-}
-
-fn get_intersection_distance_mixed(h1: Pair, h2: Pair, v1: Pair, v2: Pair) -> Option<i32> {
     if !mix_lines_intersect(h1, h2, v1, v2) {
         return None;
     }
-    Some(id(Pair { x: v1.x, y: h1.y }))
+    Some(Pair { x: v1.x, y: h1.y })
 }
 
-fn get_intersection_distance(a1: Pair, a2: Pair, b1: Pair, b2: Pair) -> Option<i32> {
-    if a1.is_zero() || b1.is_zero() || a2.is_zero() || b2.is_zero() {
-        return None;
+struct Intersections {
+    wire1: Vec<Pair>,
+    wire2: Vec<Pair>,
+    index1_save: usize,
+    index2_save: usize,
+}
+
+impl Intersections {
+    fn from_wires(w1: Vec<Pair>, w2: Vec<Pair>) -> Intersections {
+        let wire1 = w1.clone();
+        let wire2 = w2.clone();
+        let index1_save = 1;
+        let index2_save = 1;
+        Intersections {
+            wire1,
+            wire2,
+            index1_save,
+            index2_save,
+        }
     }
-    if is_horizontal(a1, a2) && is_horizontal(b1, b2) {
-        return get_intersection_distance_horizontal(a1, a2, b1, b2);
-    }
-    if is_vertical(a1, a2) && is_vertical(b1, b2) {
-        return get_intersection_distance_vertical(a1, a2, b1, b2);
-    }
-    if is_horizontal(a1, a2) {
-        return get_intersection_distance_mixed(a1, a2, b1, b2);
-    } else {
-        return get_intersection_distance_mixed(b1, b2, a1, a2);
+}
+
+impl Iterator for Intersections {
+    type Item = Pair;
+
+    fn next(&mut self) -> Option<Pair> {
+        for index1 in self.index1_save..self.wire1.len() {
+            let first1 = self.wire1[index1 - 1];
+            let second1 = self.wire1[index1];
+            for index2 in self.index2_save..self.wire2.len() {
+                let first2 = self.wire2[index2 - 1];
+                let second2 = self.wire2[index2];
+                if let Some(intersection) = get_intersection(first1, second1, first2, second2) {
+                    self.index2_save = index2 + 1;
+                    return Some(intersection);
+                }
+                self.index2_save = index2 + 1;
+            }
+            self.index2_save = 1;
+            self.index1_save = index1 + 1;
+        }
+        None
     }
 }
 
@@ -152,23 +148,41 @@ fn part1(input: &str) {
     let wire2 = build_wire(wire2_raw);
 
     let mut largest = 0;
-
-    for index1 in 1..wire1.len() {
-        let first1 = wire1[index1 - 1];
-        let second1 = wire1[index1];
-        for index2 in 1..wire2.len() {
-            let first2 = wire2[index2 - 1];
-            let second2 = wire2[index2];
-            if let Some(vertex_distance) =
-                get_intersection_distance(first1, second1, first2, second2)
-            {
-                if largest == 0 || vertex_distance < largest {
-                    largest = vertex_distance;
-                }
-            }
+    for intersection in Intersections::from_wires(wire1, wire2) {
+        if intersection.is_zero() {
+            continue;
+        }
+        let distance = id(intersection);
+        if largest == 0 || distance < largest {
+            largest = distance;
         }
     }
     println!("{}", largest);
+}
+
+fn pair_is_between_pairs(a: Pair, b: Pair, p: Pair) -> bool {
+    if (a.x == p.x) && (b.x == p.x) {
+        return true;
+    } else if (a.y == p.y) && (b.y == p.y) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+fn get_length_to_intersection(wire: Vec<Pair>, p: Pair) -> i32 {
+    let mut sum: i32 = 0;
+    for index in 1..wire.len() {
+        let a = wire[index - 1];
+        let b = wire[index];
+        if pair_is_between_pairs(a, b, p) {
+            sum += d(a, p);
+            break;
+        } else {
+            sum += d(a, b);
+        }
+    }
+    sum
 }
 
 fn part2(input: &str) {
@@ -178,4 +192,20 @@ fn part2(input: &str) {
 
     let wire1 = build_wire(wire1_raw);
     let wire2 = build_wire(wire2_raw);
+
+    let mut smallest = i32::max_value();
+    let mut answer = 0;
+    for intersection in Intersections::from_wires(wire1.clone(), wire2.clone()) {
+        if intersection.is_zero() {
+            continue;
+        }
+        let t1 = get_length_to_intersection(wire1.clone(), intersection);
+        let t2 = get_length_to_intersection(wire2.clone(), intersection);
+        let diff = (t1 - t1).abs();
+        if diff < smallest {
+            smallest = diff;
+            answer = t1 + t2;
+        }
+    }
+    println!("{}", answer);
 }
