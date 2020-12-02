@@ -1,3 +1,4 @@
+use regex::Regex;
 use std::io::{self, Read};
 
 fn main() {
@@ -10,17 +11,15 @@ fn main() {
 
 fn part1(input: &str) {
     let mut valid_passwords = 0;
+    let re = Regex::new(r"(?P<min>\d*)-(?P<max>\d*) (?P<letter>[a-z]): (?P<pass>[a-z]*)").unwrap();
     for line in input.lines() {
-        let tokens: Vec<&str> = line.split_whitespace().collect();
-        let minmaxtokens: Vec<&str> = tokens[0].split("-").collect();
-        let min = minmaxtokens[0].parse::<i32>().unwrap();
-        let max = minmaxtokens[1].parse::<i32>().unwrap();
-
-        let letter = tokens[1].chars().next().unwrap();
+        let caps = re.captures(line).unwrap();
+        let min = caps["min"].parse::<i32>().unwrap();
+        let max = caps["max"].parse::<i32>().unwrap();
 
         let mut count = 0;
-        for c in tokens[2].chars() {
-            if c == letter {
+        for c in caps["pass"].chars() {
+            if c == caps["letter"].chars().next().unwrap() {
                 count += 1;
             }
         }
@@ -34,19 +33,18 @@ fn part1(input: &str) {
 
 fn part2(input: &str) {
     let mut valid_passwords = 0;
+    let re = Regex::new(r"(?P<min>\d*)-(?P<max>\d*) (?P<letter>[a-z]): (?P<pass>[a-z]*)").unwrap();
     for line in input.lines() {
-        let tokens: Vec<&str> = line.split_whitespace().collect();
-        let minmaxtokens: Vec<&str> = tokens[0].split("-").collect();
-        let min = minmaxtokens[0].parse::<i32>().unwrap() as usize;
-        let max = minmaxtokens[1].parse::<i32>().unwrap() as usize;
+        let caps = re.captures(line).unwrap();
+        let min = caps["min"].parse::<i32>().unwrap() as usize;
+        let max = caps["max"].parse::<i32>().unwrap() as usize;
 
-        let letter = tokens[1].chars().next().unwrap();
-
-        if tokens[2].len() + 1 < max {
+        if caps["pass"].len() + 1 < max {
             continue;
         }
 
-        let chars: Vec<char> = tokens[2].chars().collect();
+        let chars: Vec<char> = caps["pass"].chars().collect();
+        let letter = caps["letter"].chars().next().unwrap();
 
         if (chars[min - 1] == letter) ^ (chars[max - 1] == letter) {
             valid_passwords += 1;
