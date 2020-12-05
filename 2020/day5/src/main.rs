@@ -15,16 +15,13 @@ fn main() {
 fn part1(input: &str) {
     let mut max = 2;
     for line in input.lines() {
-        let row = line
-            .chars()
-            .take(7)
-            .fold(0, |acc, x| if x == 'B' { acc * 2 + 1 } else { acc * 2 });
-        let col =
-            line.chars()
-                .skip(7)
-                .take(3)
-                .fold(0, |acc, x| if x == 'R' { acc * 2 + 1 } else { acc * 2 });
-        let id = row * 8 + col;
+        let id = line.chars().take(10).fold(0, |acc, x| {
+            if x == 'B' || x == 'R' {
+                acc * 2 + 1
+            } else {
+                acc * 2
+            }
+        });
         if id > max {
             max = id
         }
@@ -35,16 +32,13 @@ fn part1(input: &str) {
 fn part2(input: &str) {
     let mut seats = Vec::new();
     for line in input.lines() {
-        let row = line
-            .chars()
-            .take(7)
-            .fold(0, |acc, x| if x == 'B' { acc * 2 + 1 } else { acc * 2 });
-        let col =
-            line.chars()
-                .skip(7)
-                .take(3)
-                .fold(0, |acc, x| if x == 'R' { acc * 2 + 1 } else { acc * 2 });
-        let id = row * 8 + col;
+        let id = line.chars().take(10).fold(0, |acc, x| {
+            if x == 'B' || x == 'R' {
+                acc * 2 + 1
+            } else {
+                acc * 2
+            }
+        });
         seats.push(id);
     }
     seats.sort();
