@@ -79,7 +79,7 @@ fn part2(input: &str) {
                 break;
             }
             let cur = &mod_inst[sp as usize];
-            if seen.contains(&sp) && &cur.0[..] == "jmp" {
+            if seen.contains(&sp) {
                 break;
             }
             seen.insert(sp);
